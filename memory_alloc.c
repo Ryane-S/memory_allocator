@@ -105,15 +105,65 @@ static void initialize_buffer(struct memory_block* block,
 }
 
 void* memalloc_allocate(struct memory_alloc* m, size_t size) {
-  /* Not yet implemented */
+    /* Check that the given parameters are correct */
+    assert(m);
+    assert(size > 0);
 
-  return NULL;
+    size_t nb_blocks_to_allocate = (size + m->block_size - 1) / m->block_size; // Compute the total numbers of blocks to allocate
+
+    /* Check if enough memory */
+    if (nb_blocks_to_allocate > m->available_blocks) {
+        m->errno = E_NOMEM;
+        return NULL;
+    }
+
+    /* Check if enough consecutive blocks */
+    struct memory_block* previous = NULL;
+    struct memory_block* block = m->first_block;
+
+    while (block != NULL) {
+        struct memory_block* start = block;
+        struct memory_block* current = block;
+        size_t total = 1;
+
+        /* Count consecutive blocks from start block */
+        while (total < nb_blocks_to_allocate && current->next != NULL && memalloc_get_next(m, current) == current->next) {
+            current = current->next;
+            total++;
+        }
+        
+        /* If allocation is possible */
+        if (total == nb_blocks_to_allocate) {
+            struct memory_block* next = current->next;
+
+            /* Update the linked list */
+            if (previous == NULL) {
+                m->first_block = next;
+            } else {
+                previous->next = next;
+            }
+
+            /* Update the available blocks */
+            m->available_blocks -= nb_blocks_to_allocate;
+
+            initialize_buffer(start, nb_blocks_to_allocate * m->block_size); // Fill the memory to allocate with zeros
+            m->errno = E_SUCCESS; // The allocation was successful
+            return start;
+        }
+        previous = block;
+        block = block->next;
+    }
+
+    /* Enough memory but not enough consecutive blocks */
+    m->errno = E_NOMEM;
+    return NULL;
 }
 
 void memalloc_free(struct memory_alloc* m, void* address, size_t size) {
   /* Not yet implemented */
 }
 
+/* Display the memory allocator status */
 void memalloc_print(struct memory_alloc* m) {
   printf("---------------------------------\n");
   printf("Block size: %ld\n", m->block_size);
@@ -130,14 +180,6 @@ void memalloc_print(struct memory_alloc* m) {
   printf("NULL\n");
   printf("---------------------------------\n");
 }
-/*
-Block size: 16
-Available blocks: 8
-First free: 0x558c609a52a0
-Status: Success
-Content:  [0x558c609a52a0] -> [0x558c609a52b0] -> [0x558c609a52c0] -> [0x558c609a52d0] -> [0x558c609a52e0] -> [0x558c609a52f0] -> [0x558c609a5300] -> [0x558c609a5310] -> NULL
-*/
-
 
 void memalloc_error_print(enum memory_errno error_number) {
   switch(error_number) {

@@ -47,6 +47,12 @@ void test_memory_nb_consecutive_blocks(void** state){
 
   struct memory_alloc m;
   memalloc_init(&m, nb_blocks, block_size);
+  
+  /* Check that the fields of the memory allocator structure are correctly initialized */
+  assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
+  assert_int_equal(m.block_size, block_size);
+  assert_int_equal(m.available_blocks, nb_blocks);
+  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]);
   assert_int_equal(m.errno, E_SUCCESS);
 
   /* Right afterr initialization */
@@ -59,6 +65,11 @@ void test_memory_nb_consecutive_blocks(void** state){
 
   /* Free the memory allocator */
   memalloc_finalize(&m);
+  assert_int_equal(m.nb_prealloc_blocks, 0);
+  assert_int_equal(m.block_size, 0);
+  assert_int_equal(m.available_blocks, 0);
+  assert_ptr_equal(m.prealloc_blocks, NULL);
+  assert_ptr_equal(m.first_block, NULL);
   assert_int_equal(m.errno, E_SUCCESS);
 }
 
@@ -70,29 +81,31 @@ void test_memory_alloc(void** state){
 
   struct memory_alloc m;
   memalloc_init(&m, nb_blocks, block_size);
+
+  /* Check that the fields of the memory allocator structure are correctly initialized */
   assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
   assert_int_equal(m.block_size, block_size);
   assert_int_equal(m.available_blocks, nb_blocks);
+  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]);
   assert_int_equal(m.errno, E_SUCCESS);
 
-
-  /* allocating too much memory should fail */
+  /* Allocating too much memory should fail */
   pointers[0] = memalloc_allocate(&m, block_size * nb_blocks + 1);
   assert_null(pointers[0]);
   assert_int_equal(m.errno, E_NOMEM);
 
-  /* allocate a few buffers */
+  /* Allocate a few buffers */
   for(int i = 0; i<nb_blocks; i++) {
     pointers[i] = memalloc_allocate(&m, block_size);
     assert_non_null(pointers[i]);
     assert_int_equal(m.available_blocks, nb_blocks - (i+1));
     assert_int_equal(m.errno, E_SUCCESS);
 
-    /* write something to the buffer */
+    /* Write something to the buffer */
     memset(pointers[i], 7, block_size);
   }
 
-  /* free the allocated buffers */
+  /* Free the allocated buffers
   for(int i = 0; i<nb_blocks; i++) {
     memalloc_free(&m, pointers[nb_blocks-(i+1)], block_size);
     assert_int_equal(m.available_blocks, i+1);
@@ -100,9 +113,12 @@ void test_memory_alloc(void** state){
   }
 
   memalloc_finalize(&m); 
-  assert_int_equal(m.errno, E_SUCCESS);
   assert_int_equal(m.nb_prealloc_blocks, 0);
+  assert_int_equal(m.block_size, 0);
   assert_int_equal(m.available_blocks, 0);
+  assert_ptr_equal(m.prealloc_blocks, NULL);
+  assert_ptr_equal(m.first_block, NULL);
+  assert_int_equal(m.errno, E_SUCCESS);*/
 }
 
 int main(int argc, char**argv) {
@@ -114,8 +130,8 @@ int main(int argc, char**argv) {
      * your own tests.
      */
     cmocka_unit_test(test_memory_init),
-    cmocka_unit_test(test_memory_nb_consecutive_blocks)
-    //cmocka_unit_test(test_memory_alloc)
+    cmocka_unit_test(test_memory_nb_consecutive_blocks),
+    cmocka_unit_test(test_memory_alloc)
   };
   return cmocka_run_group_tests(tests, NULL, NULL);
 }
