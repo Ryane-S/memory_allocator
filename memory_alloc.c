@@ -28,6 +28,7 @@ static struct memory_block* memalloc_get_next(struct memory_alloc* m, struct mem
   return memalloc_get_address(current, 1, m->block_size);
 }
 
+/* Initialize the memory_alloc structure */
 void memalloc_init(struct memory_alloc* m, int nb_blocks, size_t block_size) {
   /* Check that the given parameters are correct */
   assert(m);
@@ -69,11 +70,24 @@ void memalloc_finalize(struct memory_alloc* m) {
   m->errno = E_SUCCESS; // The finalization was successful
 }
 
-/* return the number of consecutive blocks starting from first */
+/* Return the number of consecutive blocks starting from first */
 int memalloc_nb_consecutive_blocks(struct memory_alloc* m, struct memory_block* first) {
-  /* Not yet implemented */
+  /* Check that the given parameters are correct */
+  assert(m);
+  assert(first);
 
-  return 0;
+  /* Count the number of free consecutive blocks starting from first */
+  int nb_consecutive_blocks = 0;
+  struct memory_block* current = first;
+  while(current != NULL){
+    nb_consecutive_blocks ++;
+    if (current->next != memalloc_get_next(m, current)){
+      break; // If the next block in the linked list is NULL_BLOCK or not consecutive to the current block in prealloc_blocks, break the loop
+    }
+    current = current->next;
+  }
+
+  return nb_consecutive_blocks;
 }
 
 void memalloc_reorder(struct memory_alloc* m) {

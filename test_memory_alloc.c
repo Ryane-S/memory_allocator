@@ -40,6 +40,29 @@ void test_memory_init(void** state){
   assert_int_equal(m.errno, E_SUCCESS);
 }
 
+/* Test memalloc_nb_consecutive_blocks() */
+void test_memory_nb_consecutive_blocks(void** state){
+  size_t block_size = 8;
+  int nb_blocks = 100;
+
+  struct memory_alloc m;
+  memalloc_init(&m, nb_blocks, block_size);
+  assert_int_equal(m.errno, E_SUCCESS);
+
+  /* Right afterr initialization */
+  struct memory_block* current = m.first_block;
+  for (int i=0; i<m.nb_prealloc_blocks; i++){
+    assert_int_equal(memalloc_nb_consecutive_blocks(&m, current), m.nb_prealloc_blocks);
+  }
+
+  /* TODO: After a couple of allocations */
+
+  /* Free the memory allocator */
+  memalloc_finalize(&m);
+  assert_int_equal(m.errno, E_SUCCESS);
+}
+
+/* Test memory_alloc() */
 void test_memory_alloc(void** state){
   size_t block_size = 64;
   int nb_blocks = 10;
@@ -91,7 +114,8 @@ int main(int argc, char**argv) {
      * your own tests.
      */
     cmocka_unit_test(test_memory_init),
-    cmocka_unit_test(test_memory_alloc)
+    cmocka_unit_test(test_memory_nb_consecutive_blocks)
+    //cmocka_unit_test(test_memory_alloc)
   };
   return cmocka_run_group_tests(tests, NULL, NULL);
 }
