@@ -29,7 +29,28 @@ static struct memory_block* memalloc_get_next(struct memory_alloc* m, struct mem
 }
 
 void memalloc_init(struct memory_alloc* m, int nb_blocks, size_t block_size) {
-  /* Not yet implemented */
+  /* Check that the given parameters are correct */
+  assert(m);
+  assert(nb_blocks > 0);
+  assert(block_size > 0);
+
+  /* Initialize the memory allocator fields */
+  m->nb_prealloc_blocks = (size_t)nb_blocks; // Number of pre-allocated blocks
+  m->block_size = block_size; // Size of one block
+  m->prealloc_blocks = malloc(m->block_size*m->nb_prealloc_blocks); // Blocks that can be allocated
+  assert(m->prealloc_blocks); // Check is malloc succeeded
+  m->available_blocks = (size_t)nb_blocks; // Number of blocks that are available
+  m->first_block = memalloc_get(m,0); // First available block
+
+  /* Build the linked list of available blocks */
+  struct memory_block* current = m->first_block;
+  for (int i=1; i<m->nb_prealloc_blocks; i++){
+    current->next = memalloc_get(m,i);
+    current = current->next;
+  }
+  current->next = NULL; 
+
+  m->errno = E_SUCCESS; // The initialization was successful
 }
 
 /* Finalize the memory_alloc structure, and free all the memory that was malloc'd */

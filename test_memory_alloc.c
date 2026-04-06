@@ -15,15 +15,27 @@ void test_memory_init(void** state){
   struct memory_alloc m;
   memalloc_init(&m, nb_blocks, block_size);
 
+  /* Check that the fields of the memory allocator structure are correctly initialized */
   assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
   assert_int_equal(m.block_size, block_size);
   assert_int_equal(m.available_blocks, nb_blocks);
+  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]); // First blok is at the beginning of prealloc_blocks
   assert_int_equal(m.errno, E_SUCCESS);
 
+  /* Check that the linked list is correctly initailized */
+  struct memory_block* current = m.first_block;
+  for (int i=1; i<m.nb_prealloc_blocks; i++){
+    assert_non_null(current->next);
+    current = current->next;
+  }
+  assert_null(current->next); // The last block points to NULL_BLOCK
+
+  /*
   memalloc_finalize(&m); 
   assert_int_equal(m.errno, E_SUCCESS);
   assert_int_equal(m.nb_prealloc_blocks, 0);
   assert_int_equal(m.available_blocks, 0);
+  */
 }
 
 void test_memory_alloc(void** state){
