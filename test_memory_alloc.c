@@ -91,7 +91,7 @@ int main(int argc, char**argv) {
      * your own tests.
      */
     cmocka_unit_test(test_memory_init),
-    //cmocka_unit_test(test_memory_alloc)
+    cmocka_unit_test(test_memory_alloc)
   };
   return cmocka_run_group_tests(tests, NULL, NULL);
 }

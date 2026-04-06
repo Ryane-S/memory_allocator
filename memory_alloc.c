@@ -102,11 +102,27 @@ void memalloc_free(struct memory_alloc* m, void* address, size_t size) {
 
 void memalloc_print(struct memory_alloc* m) {
   printf("---------------------------------\n");
-
-  /* TODO: print the content of m */
-
+  printf("Block size: %ld\n", m->block_size);
+  printf("Available_blocks: %ld\n", m->available_blocks);
+  printf("First free: %p\n", m->first_block);
+  printf("Status: ");
+  memalloc_error_print(m->errno);
+  printf("Content : ");
+  struct memory_block* current = m->first_block;
+  for (int i=0; i<m->available_blocks; i++){
+    printf("[%p] -> ", current);
+    current = current->next;
+  }
+  printf("NULL\n");
   printf("---------------------------------\n");
 }
+/*
+Block size: 16
+Available blocks: 8
+First free: 0x558c609a52a0
+Status: Success
+Content:  [0x558c609a52a0] -> [0x558c609a52b0] -> [0x558c609a52c0] -> [0x558c609a52d0] -> [0x558c609a52e0] -> [0x558c609a52f0] -> [0x558c609a5300] -> [0x558c609a5310] -> NULL
+*/
 
 
 void memalloc_error_print(enum memory_errno error_number) {
