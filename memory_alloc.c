@@ -32,6 +32,7 @@ struct memory_block* memalloc_get_next(struct memory_alloc* m, struct memory_blo
 int find_index_memory_block(struct memory_alloc* m, void* address){
   /* Check that the given parameters are correct */
   assert(m);
+  assert(address);
 
   uintptr_t addr = (uintptr_t) address;
 
@@ -293,16 +294,120 @@ void memalloc_error_print(enum memory_errno error_number) {
   }
 }
 
+/* Allocate memory like malloc */
 void* memalloc_lifelike_malloc(struct memory_alloc *m, size_t size) {
-  /* Not yet implemented */
+  /* Check that the given parameters are correct */
+  assert(m);
+  assert(size > 0);
+
+  /* Compute total blocks needed +1 for header block */
+  size_t nb_user_blocks = (size + m->block_size - 1) / m->block_size;
+  size_t nb_blocks_to_allocate = nb_user_blocks + 1;
+
+  /* Check if enough memory */
+  if (nb_blocks_to_allocate > m->available_blocks) {
+    m->errno = E_NOMEM;
+    return NULL;
+  }
+
+  memalloc_reorder(m);
+
+  /* Search for consecutive blocks */
+  struct memory_block* previous = NULL;
+  struct memory_block* block = m->first_block;
+
+  while (block != NULL) {
+    struct memory_block* start = block;
+    struct memory_block* current = block;
+    size_t total = 1;
+
+    while (total < nb_blocks_to_allocate && current->next != NULL && memalloc_get_next(m, current) == current->next) {
+      current = current->next;
+      total++;
+    }
+
+    /* If allocation is possible */
+    if (total == nb_blocks_to_allocate) {
+      struct memory_block* next = current->next;
+      if (previous == NULL) {
+        m->first_block = next;
+      }
+      else {
+        previous->next = next;
+      }
+
+      m->available_blocks -= nb_blocks_to_allocate;
+
+      /* Store allocation size in header */
+      size_t* header = (size_t*)start;
+      *header = nb_user_blocks;
+
+      /* Return pointer to user blocks */
+      void* user_ptr = (void*)memalloc_get_next(m, start);
+      initialize_buffer(user_ptr, nb_user_blocks * m->block_size);
+
+      m->errno = E_SUCCESS;
+      return user_ptr;
+    }
+    previous = block;
+    block = block->next;
+  }
+
+  /* Not enough consecutive blocks */
+  m->errno = E_SHOULD_PACK;
   return NULL;
 }
 
-void memalloc_lifelike_free(struct memory_alloc *m, void* addr) {
-  /* Not yet implemented */
+/* Free memory previously allocated */
+void memalloc_lifelike_free(struct memory_alloc *m, void* address) {
+  /* Check that the given parameters are correct */
+  assert(m);
+  assert(address);
+
+  /* Retrieve header block */
+  struct memory_block* header = memalloc_get_address((struct memory_block*)address, -1, m->block_size);
+  size_t nb_user_blocks = *((size_t*)header);
+  size_t nb_blocks_to_free = nb_user_blocks + 1;
+
+  /* Reinsert blocks at start of free list */
+  struct memory_block* current = header;
+  for (size_t i = 0; i < nb_blocks_to_free - 1; i++) {
+    struct memory_block* next = memalloc_get_next(m, current);
+    current->next = next;
+    current = next;
+  }
+  current->next = m->first_block;
+  m->first_block = header;
+
+  m->available_blocks += nb_blocks_to_free;
+  m->errno = E_SUCCESS;
 }
 
-void* memalloc_lifelike_realloc(struct memory_alloc *m, void* addr, size_t size){
-  /* Not yet implemented */
-  return NULL;
+/* Reallocate memory previously allocated */
+void* memalloc_lifelike_realloc(struct memory_alloc *m, void* address, size_t size) {
+  /* Check that the given parameter is correct */
+  assert(m);
+  assert(address);
+  assert(size > 0);
+
+  /* Retrieve header and current allocation size */
+  struct memory_block* header = memalloc_get_address((struct memory_block*)address, -1, m->block_size);
+  size_t old_user_blocks = *((size_t*)header);
+  size_t old_bytes = old_user_blocks * m->block_size;
+
+  /* Allocate new memory */
+  void* new_alloc = memalloc_lifelike_malloc(m, size);
+  assert(new_alloc);
+
+  /* Copy old data */
+  if (old_bytes < size) {
+      memcpy(new_alloc, address, old_bytes);
+  } else {
+      memcpy(new_alloc, address, size);
+  }
+
+  /* Free old allocation */
+  memalloc_lifelike_free(m, address);
+
+  return new_alloc;
 }
