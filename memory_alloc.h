@@ -39,6 +39,17 @@ struct memory_alloc {
   enum memory_errno errno;
 };
 
+/* Starting from b, skip inc blocks of size block_size
+ * retrun the address of the resulting block
+ */
+struct memory_block* memalloc_get_address(struct memory_block* b, int inc, size_t block_size);
+
+/* compute the address of index th block of the allocator */
+struct memory_block* memalloc_get(struct memory_alloc* m, int index);
+
+/* compute the address of next block */
+struct memory_block* memalloc_get_next(struct memory_alloc* m, struct memory_block* current);
+
 /* find the location of a given byte in the memory allocator */
 int find_index_memory_block(struct memory_alloc* m, void* address);
 
@@ -61,6 +72,8 @@ void* memalloc_allocate(struct memory_alloc* m, size_t size);
 
 /* Free the size bytes memory space starting at address addr */
 void memalloc_free(struct memory_alloc* m, void* address, size_t size);
+
+void memalloc_reorder(struct memory_alloc* m);
 
 /* Print a message corresponding to errno */
 void memalloc_error_print(enum memory_errno error_number);

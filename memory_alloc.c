@@ -11,20 +11,20 @@
 /* Starting from b, skip inc blocks of size block_size
  * retrun the address of the resulting block
  */
-static struct memory_block* memalloc_get_address(struct memory_block* b, int inc, size_t block_size) {
+struct memory_block* memalloc_get_address(struct memory_block* b, int inc, size_t block_size) {
   uintptr_t base = (uintptr_t) b;
   uintptr_t result = base + (inc * block_size);
   return (struct memory_block*) result;
 }
 
 /* compute the address of index th block of the allocator */
-static struct memory_block* memalloc_get(struct memory_alloc* m, int index) {
+struct memory_block* memalloc_get(struct memory_alloc* m, int index) {
   assert(index >= 0 && index < m->nb_prealloc_blocks);
   return memalloc_get_address(m->prealloc_blocks, index, m->block_size);
 }
 
 /* compute the address of next block */
-static struct memory_block* memalloc_get_next(struct memory_alloc* m, struct memory_block* current) {
+struct memory_block* memalloc_get_next(struct memory_alloc* m, struct memory_block* current) {
   return memalloc_get_address(current, 1, m->block_size);
 }
 
@@ -126,9 +126,39 @@ int memalloc_nb_consecutive_blocks(struct memory_alloc* m, struct memory_block* 
 }
 
 void memalloc_reorder(struct memory_alloc* m) {
-  /* Not yet implemented */
-}
+  /* Check that the given parameters are correct */
+  assert(m);
+  
+  struct memory_block *blocks[m->available_blocks];
+  struct memory_block *current = m->first_block;
 
+  for (int i = 0; i < m->available_blocks; i++) {
+    blocks[i] = current;
+    current = current->next;
+  }
+
+  /* Bubble sort */
+  for (int i = 0; i < m->available_blocks - 1; i++) {
+    for (int j = 0; j < m->available_blocks - i - 1; j++) {
+      if (blocks[j] > blocks[j + 1]) {
+	      struct memory_block *tmp = blocks[j];
+	      blocks[j] = blocks[j + 1];
+	      blocks[j + 1] = tmp;
+      }
+    }
+  }
+  
+  /* Rebuild the linked list */
+  m->first_block = blocks[0];
+  current = m->first_block;
+  
+  for (int i = 1; i < m->available_blocks; i++) {
+    current->next = blocks[i];
+    current = current->next;
+  }
+  
+  current->next = NULL;
+}
 
 /* Initialize an allocated buffer with zeros */
 static void initialize_buffer(struct memory_block* block, size_t size) {
@@ -150,6 +180,8 @@ void* memalloc_allocate(struct memory_alloc* m, size_t size) {
         m->errno = E_NOMEM;
         return NULL;
     }
+
+    memalloc_reorder(m);
 
     /* Check if enough consecutive blocks */
     struct memory_block* previous = NULL;
@@ -189,7 +221,7 @@ void* memalloc_allocate(struct memory_alloc* m, size_t size) {
     }
 
     /* Enough memory but not enough consecutive blocks */
-    m->errno = E_NOMEM;
+    m->errno = E_SHOULD_PACK;
     return NULL;
 }
 
