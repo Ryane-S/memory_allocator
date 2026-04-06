@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-/* result of the last memroy operation */
+/* result of the last memory operation */
 enum memory_errno {
   E_SUCCESS,			/* success */
   E_NOMEM,			/* error: not enough memory */

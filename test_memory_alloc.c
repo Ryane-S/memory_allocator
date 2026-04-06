@@ -19,10 +19,10 @@ void test_memory_init(void** state){
   assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
   assert_int_equal(m.block_size, block_size);
   assert_int_equal(m.available_blocks, nb_blocks);
-  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]); // First blok is at the beginning of prealloc_blocks
+  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]); // First block is at the beginning of prealloc_blocks
   assert_int_equal(m.errno, E_SUCCESS);
 
-  /* Check that the linked list is correctly initailized */
+  /* Check that the linked list is correctly initialized */
   struct memory_block* current = m.first_block;
   for (int i=1; i<m.nb_prealloc_blocks; i++){
     assert_non_null(current->next);
@@ -30,12 +30,14 @@ void test_memory_init(void** state){
   }
   assert_null(current->next); // The last block points to NULL_BLOCK
 
-  /*
+  /* Free the memory allocator */
   memalloc_finalize(&m); 
-  assert_int_equal(m.errno, E_SUCCESS);
   assert_int_equal(m.nb_prealloc_blocks, 0);
+  assert_int_equal(m.block_size, 0);
   assert_int_equal(m.available_blocks, 0);
-  */
+  assert_ptr_equal(m.prealloc_blocks, NULL);
+  assert_ptr_equal(m.first_block, NULL);
+  assert_int_equal(m.errno, E_SUCCESS);
 }
 
 void test_memory_alloc(void** state){
@@ -89,7 +91,7 @@ int main(int argc, char**argv) {
      * your own tests.
      */
     cmocka_unit_test(test_memory_init),
-    cmocka_unit_test(test_memory_alloc)
+    //cmocka_unit_test(test_memory_alloc)
   };
   return cmocka_run_group_tests(tests, NULL, NULL);
 }

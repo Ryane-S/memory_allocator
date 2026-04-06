@@ -55,7 +55,18 @@ void memalloc_init(struct memory_alloc* m, int nb_blocks, size_t block_size) {
 
 /* Finalize the memory_alloc structure, and free all the memory that was malloc'd */
 void memalloc_finalize(struct memory_alloc* m) {
-  /* Not yet implemented */
+  /* Check that the given parameter is correct */
+  assert(m);
+
+  /* Reset the memory allocator fields */
+  m->nb_prealloc_blocks = 0; // Set the number of pre-allocated blocks to 0
+  m->block_size = 0; // Set the size of one block to 0;
+  free(m->prealloc_blocks); // Free the memory that was malloc'd
+  m->prealloc_blocks = NULL;
+  m->available_blocks = 0; // Set the number of available blocks to 0
+  m->first_block = NULL;
+
+  m->errno = E_SUCCESS; // The finalization was successful
 }
 
 /* return the number of consecutive blocks starting from first */
