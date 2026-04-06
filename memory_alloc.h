@@ -39,6 +39,8 @@ struct memory_alloc {
   enum memory_errno errno;
 };
 
+/* find the location of a given byte in the memory allocator */
+int find_index_memory_block(struct memory_alloc* m, void* address);
 
 /* Initialize the memory_alloc structure */
 void memalloc_init(struct memory_alloc* m, int nb_blocks, size_t block_size);

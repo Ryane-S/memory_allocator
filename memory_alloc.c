@@ -28,6 +28,41 @@ static struct memory_block* memalloc_get_next(struct memory_alloc* m, struct mem
   return memalloc_get_address(current, 1, m->block_size);
 }
 
+/* find the location of a given byte in the memory allocator */
+int find_index_memory_block(struct memory_alloc* m, void* address){
+  /* Check that the given parameters are correct */
+  assert(m);
+
+  uintptr_t addr = (uintptr_t) address;
+
+  /* Match the given address to its corresponding memory block */
+  for (int i=0; i<m->nb_prealloc_blocks-1; i++){
+    struct memory_block* block1 = memalloc_get(m, i);
+    struct memory_block* block2 = memalloc_get(m, i+1);
+
+    uintptr_t b1 = (uintptr_t) block1;
+    uintptr_t b2 = (uintptr_t) block2;
+
+    if (addr >= b1 && addr < b2){
+      return i;
+    }
+  }
+
+  /* Special case : address is within the last block */
+  struct memory_block* block1 = memalloc_get(m, m->nb_prealloc_blocks-1);
+  struct memory_block* block2 = memalloc_get_address(m->prealloc_blocks, m->nb_prealloc_blocks, m->block_size);
+
+  uintptr_t b1 = (uintptr_t) block1;
+  uintptr_t b2 = (uintptr_t) block2;
+
+  if (addr >= b1 && addr < b2){
+    return m->nb_prealloc_blocks;
+  }
+
+  /* The address does nit belong to the allocated memory */
+  return -1;
+}
+
 /* Initialize the memory_alloc structure */
 void memalloc_init(struct memory_alloc* m, int nb_blocks, size_t block_size) {
   /* Check that the given parameters are correct */
@@ -96,8 +131,7 @@ void memalloc_reorder(struct memory_alloc* m) {
 
 
 /* Initialize an allocated buffer with zeros */
-static void initialize_buffer(struct memory_block* block,
-			      size_t size) {
+static void initialize_buffer(struct memory_block* block, size_t size) {
   char* ptr = (char*)block;
   for(int i=0; i<size; i++) {
     ptr[i]=0;
@@ -160,7 +194,36 @@ void* memalloc_allocate(struct memory_alloc* m, size_t size) {
 }
 
 void memalloc_free(struct memory_alloc* m, void* address, size_t size) {
-  /* Not yet implemented */
+  /* Check that the given parameters are correct */
+  assert(m);
+  assert(address);
+  assert(size > 0);
+
+  size_t nb_blocks_to_free = (size + m->block_size - 1) / m->block_size;
+
+  /* Find matcging memory block */
+  int index = find_index_memory_block(m, address);
+  assert(index >= 0);
+
+  if (index == m->nb_prealloc_blocks) {
+    index = m->nb_prealloc_blocks - 1;
+  }
+
+  struct memory_block* start = memalloc_get(m, index);
+  struct memory_block* current = start;
+
+  /* Rebuild the linked list */
+  for (int i = 0; i < nb_blocks_to_free - 1; i++) {
+    struct memory_block* next = memalloc_get_next(m, current);
+    current->next = next;
+    current = next;
+  }
+
+  current->next = m->first_block;
+  m->first_block = start;
+
+  m->available_blocks += nb_blocks_to_free;
+  m->errno = E_SUCCESS;
 }
 
 /* Display the memory allocator status */

@@ -61,7 +61,38 @@ void test_memory_nb_consecutive_blocks(void** state){
     assert_int_equal(memalloc_nb_consecutive_blocks(&m, current), m.nb_prealloc_blocks);
   }
 
-  /* TODO: After a couple of allocations */
+  /* Free the memory allocator */
+  memalloc_finalize(&m);
+  assert_int_equal(m.nb_prealloc_blocks, 0);
+  assert_int_equal(m.block_size, 0);
+  assert_int_equal(m.available_blocks, 0);
+  assert_ptr_equal(m.prealloc_blocks, NULL);
+  assert_ptr_equal(m.first_block, NULL);
+  assert_int_equal(m.errno, E_SUCCESS);
+}
+
+void test_find_index_memory_block(void** state){
+  size_t block_size = 64;
+  int nb_blocks = 10;
+  void* pointers[nb_blocks];
+
+  struct memory_alloc m;
+  memalloc_init(&m, nb_blocks, block_size);
+
+  /* Check that the fields of the memory allocator structure are correctly initialized */
+  assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
+  assert_int_equal(m.block_size, block_size);
+  assert_int_equal(m.available_blocks, nb_blocks);
+  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]);
+  assert_int_equal(m.errno, E_SUCCESS);
+
+  /* Find index of the block containing the given address*/
+  struct memory_block* current = m.first_block;
+  for (int i=0; i<m.nb_prealloc_blocks-1; i++){
+    assert_int_equal(find_index_memory_block(&m, (void*)current), i);
+    current = current->next;
+  }
+  assert_int_equal(find_index_memory_block(&m, (void*)current), m.nb_prealloc_blocks);
 
   /* Free the memory allocator */
   memalloc_finalize(&m);
@@ -105,20 +136,21 @@ void test_memory_alloc(void** state){
     memset(pointers[i], 7, block_size);
   }
 
-  /* Free the allocated buffers
+  /* Free the allocated buffers */
   for(int i = 0; i<nb_blocks; i++) {
     memalloc_free(&m, pointers[nb_blocks-(i+1)], block_size);
     assert_int_equal(m.available_blocks, i+1);
     assert_int_equal(m.errno, E_SUCCESS);
   }
 
+  /* Free the memory allocator */
   memalloc_finalize(&m); 
   assert_int_equal(m.nb_prealloc_blocks, 0);
   assert_int_equal(m.block_size, 0);
   assert_int_equal(m.available_blocks, 0);
   assert_ptr_equal(m.prealloc_blocks, NULL);
   assert_ptr_equal(m.first_block, NULL);
-  assert_int_equal(m.errno, E_SUCCESS);*/
+  assert_int_equal(m.errno, E_SUCCESS);
 }
 
 int main(int argc, char**argv) {
@@ -131,6 +163,7 @@ int main(int argc, char**argv) {
      */
     cmocka_unit_test(test_memory_init),
     cmocka_unit_test(test_memory_nb_consecutive_blocks),
+    cmocka_unit_test(test_find_index_memory_block),
     cmocka_unit_test(test_memory_alloc)
   };
   return cmocka_run_group_tests(tests, NULL, NULL);
