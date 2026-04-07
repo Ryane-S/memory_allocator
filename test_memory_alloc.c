@@ -19,7 +19,7 @@ void test_memory_init(void** state){
   assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
   assert_int_equal(m.block_size, block_size);
   assert_int_equal(m.available_blocks, nb_blocks);
-  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]); // First block is at the beginning of prealloc_blocks
+  assert_ptr_equal(m.first_block, &((struct memory_block*)m.prealloc_blocks)[0]); // First block is at the beginning of prealloc_blocks
   assert_int_equal(m.errno, E_SUCCESS);
 
   /* Check that the linked list is correctly initialized */
@@ -52,7 +52,7 @@ void test_memory_nb_consecutive_blocks(void** state){
   assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
   assert_int_equal(m.block_size, block_size);
   assert_int_equal(m.available_blocks, nb_blocks);
-  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]);
+  assert_ptr_equal(m.first_block, &((struct memory_block*)m.prealloc_blocks)[0]);
   assert_int_equal(m.errno, E_SUCCESS);
 
   /* Right afterr initialization */
@@ -74,7 +74,6 @@ void test_memory_nb_consecutive_blocks(void** state){
 void test_find_index_memory_block(void** state){
   size_t block_size = 64;
   int nb_blocks = 10;
-  void* pointers[nb_blocks];
 
   struct memory_alloc m;
   memalloc_init(&m, nb_blocks, block_size);
@@ -83,7 +82,7 @@ void test_find_index_memory_block(void** state){
   assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
   assert_int_equal(m.block_size, block_size);
   assert_int_equal(m.available_blocks, nb_blocks);
-  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]);
+  assert_ptr_equal(m.first_block, &((struct memory_block*)m.prealloc_blocks)[0]);
   assert_int_equal(m.errno, E_SUCCESS);
 
   /* Find index of the block containing the given address*/
@@ -117,7 +116,7 @@ void test_memory_alloc(void** state){
   assert_int_equal(m.nb_prealloc_blocks, nb_blocks);
   assert_int_equal(m.block_size, block_size);
   assert_int_equal(m.available_blocks, nb_blocks);
-  assert_ptr_equal(m.first_block, &m.prealloc_blocks[0]);
+  assert_ptr_equal(m.first_block, &((struct memory_block*)m.prealloc_blocks)[0]);
   assert_int_equal(m.errno, E_SUCCESS);
 
   /* Allocating too much memory should fail */
