@@ -28,7 +28,7 @@ struct memory_block* memalloc_get_next(struct memory_alloc* m, struct memory_blo
   return memalloc_get_address(current, 1, m->block_size);
 }
 
-/* find the location of a given byte in the memory allocator */
+/* find the location of a given address in the memory allocator */
 int find_index_memory_block(struct memory_alloc* m, void* address){
   /* Check that the given parameters are correct */
   assert(m);
@@ -57,7 +57,7 @@ int find_index_memory_block(struct memory_alloc* m, void* address){
   uintptr_t b2 = (uintptr_t) block2;
 
   if (addr >= b1 && addr < b2){
-    return m->nb_prealloc_blocks;
+    return m->nb_prealloc_blocks-1;
   }
 
   /* The address does nit belong to the allocated memory */
@@ -191,7 +191,7 @@ void* memalloc_allocate(struct memory_alloc* m, size_t size) {
     while (block != NULL) {
         struct memory_block* start = block;
         struct memory_block* current = block;
-        size_t total = 1;
+        size_t total = 1; // Number of consecutive blocks going from block
 
         /* Count consecutive blocks from start block */
         while (total < nb_blocks_to_allocate && current->next != NULL && memalloc_get_next(m, current) == current->next) {
@@ -234,13 +234,9 @@ void memalloc_free(struct memory_alloc* m, void* address, size_t size) {
 
   size_t nb_blocks_to_free = (size + m->block_size - 1) / m->block_size;
 
-  /* Find matcging memory block */
+  /* Find matching memory block */
   int index = find_index_memory_block(m, address);
-  assert(index >= 0);
-
-  if (index == m->nb_prealloc_blocks) {
-    index = m->nb_prealloc_blocks - 1;
-  }
+  assert(index >= 0); // Check if he given address was prealloc'd
 
   struct memory_block* start = memalloc_get(m, index);
   struct memory_block* current = start;
@@ -329,6 +325,8 @@ void* memalloc_lifelike_malloc(struct memory_alloc *m, size_t size) {
     /* If allocation is possible */
     if (total == nb_blocks_to_allocate) {
       struct memory_block* next = current->next;
+
+      /* Rebuild the linked list */
       if (previous == NULL) {
         m->first_block = next;
       }
@@ -339,15 +337,15 @@ void* memalloc_lifelike_malloc(struct memory_alloc *m, size_t size) {
       m->available_blocks -= nb_blocks_to_allocate;
 
       /* Store allocation size in header */
-      size_t* header = (size_t*)start;
+      size_t* header = (size_t*)start; // Only if size of memory block is >= 8
       *header = nb_user_blocks;
 
       /* Return pointer to user blocks */
-      void* user_ptr = (void*)memalloc_get_next(m, start);
-      initialize_buffer(user_ptr, nb_user_blocks * m->block_size);
+      struct memory_block* user = memalloc_get_next(m, start);
+      initialize_buffer(user, nb_user_blocks * m->block_size);
 
       m->errno = E_SUCCESS;
-      return user_ptr;
+      return user;
     }
     previous = block;
     block = block->next;
@@ -366,7 +364,7 @@ void memalloc_lifelike_free(struct memory_alloc *m, void* address) {
 
   /* Retrieve header block */
   struct memory_block* header = memalloc_get_address((struct memory_block*)address, -1, m->block_size);
-  size_t nb_user_blocks = *((size_t*)header);
+  size_t nb_user_blocks = *((size_t*)header); // REetrieve number of used blocks
   size_t nb_blocks_to_free = nb_user_blocks + 1;
 
   /* Reinsert blocks at start of free list */

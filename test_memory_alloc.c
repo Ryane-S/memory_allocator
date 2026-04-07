@@ -92,7 +92,7 @@ void test_find_index_memory_block(void** state){
     assert_int_equal(find_index_memory_block(&m, (void*)current), i);
     current = current->next;
   }
-  assert_int_equal(find_index_memory_block(&m, (void*)current), m.nb_prealloc_blocks);
+  assert_int_equal(find_index_memory_block(&m, (void*)current), m.nb_prealloc_blocks-1);
 
   /* Free the memory allocator */
   memalloc_finalize(&m);
