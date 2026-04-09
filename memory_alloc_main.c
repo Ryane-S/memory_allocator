@@ -10,12 +10,11 @@ int main(int argc, char**argv) {
     struct memory_alloc m;
     int nb_blocks = 8;
     size_t block_size = 16;
+    size_t alloc_size = (nb_blocks * block_size) / 3; // 42
 
     printf("Initialization :\n");
     memalloc_init(&m, nb_blocks, block_size);
     memalloc_print(&m);
-    
-    size_t alloc_size = (nb_blocks * block_size) / 3; // 42
   
     printf("Allocation :\n");
     char* buffer = memalloc_allocate(&m, 64); // 4 blocks allocated
@@ -30,8 +29,11 @@ int main(int argc, char**argv) {
     printf("Free :\n"); // Free 3 blocks
     memalloc_free(&m, buffer, alloc_size);
     memalloc_print(&m);
+    memalloc_finalize(&m);
 
-    /* Lifelike functions
+    /* Lifelike functions */
+    memalloc_init(&m, nb_blocks, block_size);
+
     printf("Lifelike Allocation :\n");
     char* lifelike_buffer = memalloc_lifelike_malloc(&m, alloc_size); // 42 -> 3 blocks + 1 header
     assert(lifelike_buffer);
@@ -62,8 +64,7 @@ int main(int argc, char**argv) {
     printf("After reorder :\n");
     memalloc_reorder(&m);
     memalloc_print(&m);
-
-    memalloc_finalize(&m);*/
+    memalloc_finalize(&m);
 
     return EXIT_SUCCESS;
 }
